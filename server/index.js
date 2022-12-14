@@ -1,11 +1,33 @@
-import express from "express";
-import cors from "cors"
+import { Server } from "socket.io";
 
-const app = express() ;
-app.use(cors()) ;
+const PORT = 9000;
 
-const PORT = 8000 ;
+const io = new Server(PORT, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+  },
+});
 
-app.listen(PORT ,()=>{
-    console.log(`app is running successfully on PORT : ${PORT}`);
-})
+io.on("connection", (socket) => {
+  console.log(`connection successfull with socket id : ${socket.id}`);
+
+    socket.on("get-document" ,(id) =>{
+        const data = "" ;
+        socket.join(id) ;
+
+        socket.emit('load-document',data) ;
+
+        socket.on("send-changes" ,(delta) =>{
+            // console.log(delta);
+            socket.broadcast.to(id).emit('receive-changes' ,delta) ;
+        })
+
+    })
+
+    
+
+
+
+
+});
