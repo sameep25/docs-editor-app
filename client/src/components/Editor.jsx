@@ -30,15 +30,17 @@ const toolbarOptions = [
 const Editor = () => {
   const [socket, setSocket] = useState();
   const [quill, setQuill] = useState();
-  
-  const {id} = useParams() ;
 
+  const { id } = useParams();
 
   // initialise quill editor
   useEffect(() => {
-    const quillServer = new Quill("#container", {theme: "snow", modules: { toolbar: toolbarOptions} });
-    quillServer.disable() ;
-    quillServer.setText(`Loading the document with id : ${id}`)
+    const quillServer = new Quill("#container", {
+      theme: "snow",
+      modules: { toolbar: toolbarOptions },
+    });
+    quillServer.disable();
+    quillServer.setText(`Loading the document with id : ${id}`);
     setQuill(quillServer);
   }, []);
 
@@ -60,19 +62,19 @@ const Editor = () => {
       socket && socket.emit("send-changes", delta);
     };
 
-    quill && quill.on("text-change", handleChange);
+    quill && quill.on("text-change", handleChange); //quill api
 
     return () => {
-      quill && quill.off("text-change", handleChange);
+      quill && quill.off("text-change", handleChange); //quill api
     };
   }, [socket, quill]);
 
-  // handling changes send by backend/server 
+  // handling changes send by backend/server
   useEffect(() => {
     if (socket === null || quill === null) return;
 
     const handleChange = (delta) => {
-      quill.updateContents(delta) ;
+      quill.updateContents(delta); //quill api
     };
 
     socket && socket.on("receive-changes", handleChange);
@@ -82,20 +84,33 @@ const Editor = () => {
     };
   }, [socket, quill]);
 
+  //
+  useEffect(() => {
+    if (quill === null || socket === null) return;
 
-  useEffect(()=>{
-    if(quill === null || socket === null) return ;
+    // fetching data from database initially as user joins a room
+    socket &&
+      socket.once("load-document", (document) => {
+        quill && quill.setContents(document);
+        quill && quill.enable();
+      });
 
-    socket && socket.once('load-document' ,(document) =>{
-      quill && quill.setContents(document) ;
-      quill && quill.enable() ;
-    })
+    socket && socket.emit("get-document", id);
+  }, [socket, quill, id]);
 
-    socket && socket.emit('get-document' ,id) ; 
+  // saving data in db
+  useEffect(() => {
+    
+    if (socket === null && quill === null) return;
 
-  },[socket ,quill ,id])
+    const interval = setInterval(() => {
+      socket && socket.emit("save-document", quill.getContents());
+    }, 2000);
 
-
+    return () => {
+      clearInterval(interval);
+    };
+  }, [socket, quill]);
 
   return (
     <div style={{ background: "#f5f5f5" }}>
